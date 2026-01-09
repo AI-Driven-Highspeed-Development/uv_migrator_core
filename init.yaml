@@ -1,0 +1,5 @@
+version: 0.0.1
+folder_path: cores/uv_migrator_core
+type: core
+requirements: []
+repo_url: https://github.com/AI-Driven-Highspeed-Development/uv_migrator_core.git

@@ -1,0 +1,6 @@
+{
+    "module_name": "uv_migrator_core",
+    "path": {
+        "data": "./project/data/uv_migrator_core"
+    }
+}
