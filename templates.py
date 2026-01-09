@@ -1,0 +1,120 @@
+"""
+Templates for pyproject.toml generation.
+
+Contains the template structure and formatting functions for
+generating uv-compatible pyproject.toml files from init.yaml.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+# Template parts for pyproject.toml
+PROJECT_HEADER = '''[project]
+name = "{name}"
+version = "{version}"
+description = "{description}"
+requires-python = ">=3.11"
+'''
+
+DEPENDENCIES_SECTION = '''dependencies = [
+{deps}]
+'''
+
+TOOL_ADHD_SECTION = '''
+[tool.adhd]
+type = "{module_type}"
+layer = "{layer}"
+'''
+
+UV_SOURCES_SECTION = '''
+[tool.uv.sources]
+{sources}'''
+
+BUILD_SYSTEM = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+'''
+
+
+def format_dependencies(deps: list[str]) -> str:
+    """Format dependency list for pyproject.toml."""
+    if not deps:
+        return ""
+    lines = [f'    "{dep}",' for dep in deps]
+    return "\n".join(lines) + "\n"
+
+
+def format_uv_sources(sources: dict[str, dict[str, str]]) -> str:
+    """Format uv sources section for pyproject.toml."""
+    if not sources:
+        return ""
+    lines = []
+    for package_name, source_info in sources.items():
+        git_url = source_info.get("git", "")
+        lines.append(f'{package_name} = {{ git = "{git_url}" }}')
+    return "\n".join(lines)
+
+
+def generate_pyproject_content(
+    name: str,
+    version: str,
+    description: str,
+    module_type: str,
+    layer: str,
+    dependencies: list[str],
+    uv_sources: dict[str, dict[str, str]],
+) -> str:
+    """
+    Generate complete pyproject.toml content.
+    
+    Args:
+        name: Package name (hyphenated)
+        version: Version string
+        description: Package description
+        module_type: ADHD module type (core, manager, util, plugin, mcp)
+        layer: Layer classification (foundation, runtime, dev)
+        dependencies: List of all dependencies (ADHD + PyPI)
+        uv_sources: Dict of ADHD packages to their git sources
+        
+    Returns:
+        Complete pyproject.toml content as string
+    """
+    content_parts = []
+    
+    # Project header
+    content_parts.append(
+        PROJECT_HEADER.format(
+            name=name,
+            version=version,
+            description=description,
+        )
+    )
+    
+    # Dependencies section
+    if dependencies:
+        content_parts.append(
+            DEPENDENCIES_SECTION.format(deps=format_dependencies(dependencies))
+        )
+    else:
+        content_parts.append('dependencies = []\n')
+    
+    # Tool.adhd section
+    content_parts.append(
+        TOOL_ADHD_SECTION.format(
+            module_type=module_type,
+            layer=layer,
+        )
+    )
+    
+    # UV sources section (only if there are ADHD dependencies)
+    if uv_sources:
+        content_parts.append(
+            UV_SOURCES_SECTION.format(sources=format_uv_sources(uv_sources))
+        )
+    
+    # Build system
+    content_parts.append(BUILD_SYSTEM)
+    
+    return "".join(content_parts)

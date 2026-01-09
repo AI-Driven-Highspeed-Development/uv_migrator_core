@@ -1,32 +1,141 @@
-# Module Name
+# UV Migrator Core
 
 ## Overview
-- Brief purpose and key responsibilities of the module.
-- High-level architecture or interactions.
+
+Migration tool that converts ADHD framework modules from `init.yaml` format to `pyproject.toml` format compatible with uv workspaces.
+
+**Module Type:** core  
+**Layer:** dev (used only during migration)
 
 ## Features
-- Highlight primary features or services.
-- Mention any optional capabilities or flags.
+
+- **Single module migration**: `adhd migrate <module_name>`
+- **Batch migration**: `adhd migrate --all`
+- **Preview mode**: `adhd migrate --dry-run` to see output without writing
+- **Safe mode**: `adhd migrate --no-overwrite` to skip existing files
+- **Automatic layer inference**: Determines layer based on module type
+- **GitHub URL conversion**: Converts GitHub URLs to `[tool.uv.sources]` entries
 
 ## Usage
-- Example code snippet showing module initialization and core method calls.
-- CLI or API commands if applicable.
+
+### CLI Commands
+
+```bash
+# Migrate a single module
+adhd migrate session_manager
+
+# Preview migration without writing
+adhd migrate session_manager --dry-run
+
+# Migrate all modules
+adhd migrate --all
+
+# Migrate all, skip existing pyproject.toml
+adhd migrate --all --no-overwrite
+```
+
+### Programmatic Usage
+
+```python
+from cores.uv_migrator_core import UVMigratorCore
+
+migrator = UVMigratorCore()
+
+# Migrate single module
+result = migrator.migrate_module("session_manager")
+print(result.success, result.message)
+
+# Preview migration
+content = migrator.preview_migration("session_manager")
+print(content)
+
+# Migrate all modules
+report = migrator.migrate_all(dry_run=False)
+report.print_summary()
+```
+
+## Conversion Logic
+
+### Input → Output Mapping
+
+| init.yaml field | pyproject.toml field |
+|-----------------|---------------------|
+| `version` | `[project].version` |
+| `type` | `[tool.adhd].type` |
+| `requirements` (GitHub URLs) | `[tool.uv.sources]` + `[project].dependencies` |
+| `requirements.txt` (PyPI) | `[project].dependencies` |
+
+### Layer Inference Defaults
+
+| Module Type | Default Layer |
+|-------------|---------------|
+| core | foundation (unless dev-specific) |
+| util | foundation |
+| manager | runtime |
+| plugin | runtime |
+| mcp | dev |
+
+### Example Conversion
+
+**Input: init.yaml**
+```yaml
+version: 0.0.1
+type: manager
+requirements:
+  - https://github.com/AI-Driven-Highspeed-Development/Logger-Util.git
+```
+
+**Input: requirements.txt**
+```
+sqlalchemy>=2.0.0
+```
+
+**Output: pyproject.toml**
+```toml
+[project]
+name = "session-manager"
+version = "0.0.1"
+dependencies = [
+    "logger-util",
+    "sqlalchemy>=2.0.0",
+]
+
+[tool.adhd]
+type = "manager"
+layer = "runtime"
+
+[tool.uv.sources]
+logger-util = { git = "https://github.com/AI-Driven-Highspeed-Development/Logger-Util.git" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
 
 ## Module Structure
 
 ```
-<module_name>/
-├── __init__.py          # Module exports
-├── init.yaml            # Module metadata & testing scope
-├── README.md            # This file
-├── requirements.txt     # PyPI dependencies (optional)
-├── tests/               # Unit tests (optional)
-│   ├── __init__.py
-│   └── README.md
-└── playground/          # Interactive exploration (optional)
-    ├── README.md
-    └── demo.py
+cores/uv_migrator_core/
+├── __init__.py           # Module exports
+├── init.yaml             # Module metadata
+├── uv_migrator_core.py   # Main controller/orchestrator
+├── migrator.py           # Conversion logic
+├── templates.py          # pyproject.toml template strings
+├── uv_migrator_cli.py    # CLI command registration
+├── refresh.py            # Framework refresh hook
+├── README.md             # This file
+├── requirements.txt      # PyPI dependencies
+├── tests/                # Unit tests
+└── playground/           # Interactive exploration
 ```
+
+## Dependencies
+
+- `logger_util` - Logging
+- `yaml_reading_core` - YAML parsing
+- `modules_controller_core` - Module discovery
+- `cli_manager` - CLI command registration
+
 
 ## Testing
 
