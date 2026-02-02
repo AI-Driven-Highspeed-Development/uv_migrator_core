@@ -1,23 +1,20 @@
-"""
-CLI commands for uv_migrator_core.
+"""CLI commands for uv_migrator_core.
 
-Registers the `adhd migrate` command for migrating modules
+Provides the `adhd migrate` command for migrating modules
 from init.yaml to pyproject.toml format.
+
+Usage:
+    python -m uv_migrator_core.uv_migrator_cli migrate <module_name> [--dry-run] [--no-overwrite]
+    python -m uv_migrator_core.uv_migrator_cli migrate --all [--dry-run] [--no-overwrite]
 """
 
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from typing import Optional
 
-# Ensure project root is in sys.path
-if str(Path.cwd()) not in sys.path:
-    sys.path.append(str(Path.cwd()))
-
-from utils.logger_util import Logger
-from managers.cli_manager import CLIManager
-from cores.uv_migrator_core.uv_migrator_core import UVMigratorCore
+from logger_util import Logger
+from .uv_migrator_core import UVMigratorCore
 
 
 def migrate_command(
@@ -82,18 +79,28 @@ def migrate_command(
             logger.error(f"✗ {result.message}")
 
 
-def register_cli() -> None:
-    """Register migrate commands with CLIManager."""
-    cli_manager = CLIManager()
+def main(args: Optional[list[str]] = None) -> None:
+    """Main CLI entry point."""
+    if args is None:
+        args = sys.argv[1:]
     
-    # Main migrate command
-    cli_manager.register_command(
-        name="migrate",
-        callback=_cli_migrate_handler,
-        description="Migrate init.yaml to pyproject.toml format",
-        usage="adhd migrate <module_name> [--dry-run] [--no-overwrite]\n"
-              "       adhd migrate --all [--dry-run] [--no-overwrite]",
-    )
+    # Parse command (first positional arg should be 'migrate')
+    if not args or args[0] not in ("migrate", "--help", "-h"):
+        print("Usage: python -m uv_migrator_core.uv_migrator_cli migrate <module_name> [OPTIONS]")
+        print("       python -m uv_migrator_core.uv_migrator_cli migrate --all [OPTIONS]")
+        print("\nOptions:")
+        print("  --dry-run      Preview without writing files")
+        print("  --no-overwrite Skip modules that already have pyproject.toml")
+        return
+    
+    if args[0] in ("--help", "-h"):
+        print("UV Migrator - Convert init.yaml to pyproject.toml")
+        print("\nCommands:")
+        print("  migrate    Migrate module(s) to pyproject.toml format")
+        return
+    
+    # Skip 'migrate' command and process remaining args
+    _cli_migrate_handler(args[1:])
 
 
 def _cli_migrate_handler(args: list[str]) -> None:
@@ -122,3 +129,7 @@ def _cli_migrate_handler(args: list[str]) -> None:
         dry_run=dry_run,
         no_overwrite=no_overwrite,
     )
+
+
+if __name__ == "__main__":
+    main()

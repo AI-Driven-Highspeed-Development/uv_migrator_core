@@ -1,5 +1,4 @@
-"""
-Templates for pyproject.toml generation.
+"""Templates for pyproject.toml generation.
 
 Contains the template structure and formatting functions for
 generating uv-compatible pyproject.toml files from init.yaml.
@@ -35,6 +34,12 @@ BUILD_SYSTEM = '''
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["."]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "{module_name}"
 '''
 
 
@@ -47,13 +52,17 @@ def format_dependencies(deps: list[str]) -> str:
 
 
 def format_uv_sources(sources: dict[str, dict[str, str]]) -> str:
-    """Format uv sources section for pyproject.toml."""
+    """Format uv sources section for pyproject.toml.
+    
+    For workspace development, uses { workspace = true }.
+    The git URLs from init.yaml are preserved in comments for reference.
+    """
     if not sources:
         return ""
     lines = []
     for package_name, source_info in sources.items():
-        git_url = source_info.get("git", "")
-        lines.append(f'{package_name} = {{ git = "{git_url}" }}')
+        # Use workspace = true for local development
+        lines.append(f'{package_name} = {{ workspace = true }}')
     return "\n".join(lines)
 
 
@@ -65,6 +74,7 @@ def generate_pyproject_content(
     layer: str,
     dependencies: list[str],
     uv_sources: dict[str, dict[str, str]],
+    module_name: str,
 ) -> str:
     """
     Generate complete pyproject.toml content.
@@ -77,6 +87,7 @@ def generate_pyproject_content(
         layer: Layer classification (foundation, runtime, dev)
         dependencies: List of all dependencies (ADHD + PyPI)
         uv_sources: Dict of ADHD packages to their git sources
+        module_name: Module name (underscored) for wheel sources mapping
         
     Returns:
         Complete pyproject.toml content as string
@@ -114,7 +125,9 @@ def generate_pyproject_content(
             UV_SOURCES_SECTION.format(sources=format_uv_sources(uv_sources))
         )
     
-    # Build system
-    content_parts.append(BUILD_SYSTEM)
+    # Build system with sources mapping
+    content_parts.append(
+        BUILD_SYSTEM.format(module_name=module_name)
+    )
     
     return "".join(content_parts)

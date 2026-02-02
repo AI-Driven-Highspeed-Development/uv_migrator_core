@@ -7,18 +7,13 @@ from init.yaml format to pyproject.toml format compatible with uv workspaces.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 
-# Ensure project root is in sys.path
-if str(Path.cwd()) not in sys.path:
-    sys.path.append(str(Path.cwd()))
-
-from utils.logger_util import Logger
-from cores.modules_controller_core.modules_controller import ModulesController, ModuleInfo
-from cores.uv_migrator_core.migrator import generate_pyproject_toml
+from logger_util import Logger
+from modules_controller_core.modules_controller import ModulesController, ModuleInfo
+from .migrator import generate_pyproject_toml
 
 
 @dataclass

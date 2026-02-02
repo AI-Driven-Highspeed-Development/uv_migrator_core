@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-from utils.logger_util import Logger
-from cores.yaml_reading_core.yaml_reading import YamlReadingCore as YamlReader
+from logger_util import Logger
+from yaml_reading_core.yaml_reading import YamlReadingCore as YamlReader
 
-from cores.uv_migrator_core.templates import generate_pyproject_content
+from .templates import generate_pyproject_content
 
 
 # Layer inference defaults by module type
@@ -272,6 +272,7 @@ def generate_pyproject_toml(
         layer=layer,
         dependencies=all_dependencies,
         uv_sources=uv_sources,
+        module_name=module_name,  # Underscored name for wheel sources mapping
     )
     
     if not dry_run:
