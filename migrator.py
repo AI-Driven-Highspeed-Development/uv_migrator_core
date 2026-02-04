@@ -22,13 +22,13 @@ from yaml_reading_core.yaml_reading import YamlReadingCore as YamlReader
 from .templates import generate_pyproject_content
 
 
-# Layer inference defaults by module type
+# Layer inference defaults by folder
 LAYER_DEFAULTS: dict[str, str] = {
-    "core": "foundation",
-    "util": "foundation",
-    "manager": "runtime",
-    "plugin": "runtime",
-    "mcp": "dev",
+    "cores": "foundation",
+    "utils": "foundation",
+    "managers": "runtime",
+    "plugins": "runtime",
+    "mcps": "dev",
 }
 
 # Known dev-only cores that should override the foundation default
@@ -98,6 +98,12 @@ def github_url_to_package_name(url: str) -> str:
     """
     Convert a GitHub URL to a package name.
     
+    .. deprecated:: 3.0.0
+        This function was used for polyrepo Git URL handling during init.yaml migration.
+        With the workspace monorepo migration complete, new modules use `{ workspace = true }`
+        instead of Git URLs. This function is kept for backward compatibility with any
+        remaining init.yaml files that need migration.
+    
     Examples:
         https://github.com/AI-Driven-Highspeed-Development/Logger-Util.git → logger-util
         https://github.com/org/Config-Manager.git → config-manager
@@ -135,7 +141,13 @@ def github_url_to_package_name(url: str) -> str:
 
 
 def is_github_url(requirement: str) -> bool:
-    """Check if a requirement string is a GitHub URL."""
+    """Check if a requirement string is a GitHub URL.
+    
+    .. deprecated:: 3.0.0
+        This function was used for polyrepo Git URL handling during init.yaml migration.
+        With the workspace monorepo migration complete, ADHD dependencies use
+        `{ workspace = true }` instead of Git URLs.
+    """
     return "github.com" in requirement.lower()
 
 
@@ -144,6 +156,13 @@ def convert_requirements(
 ) -> tuple[list[str], dict[str, dict[str, str]]]:
     """
     Split requirements into dependencies and uv.sources.
+    
+    .. deprecated:: 3.0.0
+        This function was used for polyrepo Git URL handling during init.yaml migration.
+        With the workspace monorepo migration complete, all ADHD dependencies use
+        `{ workspace = true }` in [tool.uv.sources] instead of Git URLs.
+        This function is kept for backward compatibility with any remaining init.yaml
+        files that need migration.
     
     - GitHub URLs → add to both dependencies AND uv_sources
     - PyPI packages → add to dependencies only
@@ -177,17 +196,17 @@ def convert_requirements(
     return dependencies, uv_sources
 
 
-def infer_layer(module_type: str, module_name: str, init_yaml: dict[str, Any]) -> str:
+def infer_layer(folder: str, module_name: str, init_yaml: dict[str, Any]) -> str:
     """
-    Infer layer from module type and name.
+    Infer layer from folder and name.
     
     Priority:
     1. Explicit layer in init_yaml (if present)
     2. Known dev-only cores override
-    3. Default based on module type
+    3. Default based on folder
     
     Args:
-        module_type: Type of module (core, manager, util, plugin, mcp)
+        folder: Folder containing the module (cores, managers, utils, plugins, mcps)
         module_name: Name of the module
         init_yaml: Parsed init.yaml content
         
@@ -202,8 +221,8 @@ def infer_layer(module_type: str, module_name: str, init_yaml: dict[str, Any]) -
     if module_name in DEV_CORES:
         return "dev"
     
-    # Default based on module type
-    return LAYER_DEFAULTS.get(module_type, "runtime")
+    # Default based on folder
+    return LAYER_DEFAULTS.get(folder, "runtime")
 
 
 def module_name_to_package_name(module_name: str) -> str:
@@ -244,11 +263,17 @@ def generate_pyproject_toml(
     
     # Extract fields from init.yaml
     version = init_yaml.get("version", "0.0.1")
-    module_type = init_yaml.get("type", "unknown")
     module_name = module_path.name
     
-    # Generate description from module name
-    description = f"ADHD Framework {module_type}: {module_name}"
+    # Infer folder from path (e.g., cores, managers, mcps)
+    folder = module_path.parent.name
+    
+    # Check if this is an MCP module (either from folder or explicit flag)
+    is_mcp = folder == "mcps" or init_yaml.get("mcp", False)
+    
+    # Generate description from folder and module name
+    folder_singular = folder.rstrip("s")  # cores -> core, etc.
+    description = f"ADHD Framework {folder_singular}: {module_name}"
     
     # Convert init.yaml requirements (GitHub URLs)
     adhd_requirements = init_yaml.get("requirements", []) or []
@@ -258,7 +283,7 @@ def generate_pyproject_toml(
     all_dependencies = adhd_deps + pypi_requirements
     
     # Infer layer
-    layer = infer_layer(module_type, module_name, init_yaml)
+    layer = infer_layer(folder, module_name, init_yaml)
     
     # Generate package name
     package_name = module_name_to_package_name(module_name)
@@ -268,11 +293,11 @@ def generate_pyproject_toml(
         name=package_name,
         version=version,
         description=description,
-        module_type=module_type,
         layer=layer,
         dependencies=all_dependencies,
         uv_sources=uv_sources,
         module_name=module_name,  # Underscored name for wheel sources mapping
+        is_mcp=is_mcp,
     )
     
     if not dry_run:

@@ -170,7 +170,7 @@ class UVMigratorCore:
         
         for module in modules:
             # Optionally skip cores
-            if not include_cores and module.module_type.name == "core":
+            if not include_cores and module.folder == "cores":
                 continue
             
             result = self.migrate_module(

@@ -22,7 +22,6 @@ DEPENDENCIES_SECTION = '''dependencies = [
 
 TOOL_ADHD_SECTION = '''
 [tool.adhd]
-type = "{module_type}"
 layer = "{layer}"
 '''
 
@@ -70,11 +69,11 @@ def generate_pyproject_content(
     name: str,
     version: str,
     description: str,
-    module_type: str,
     layer: str,
     dependencies: list[str],
     uv_sources: dict[str, dict[str, str]],
     module_name: str,
+    is_mcp: bool = False,
 ) -> str:
     """
     Generate complete pyproject.toml content.
@@ -83,11 +82,11 @@ def generate_pyproject_content(
         name: Package name (hyphenated)
         version: Version string
         description: Package description
-        module_type: ADHD module type (core, manager, util, plugin, mcp)
         layer: Layer classification (foundation, runtime, dev)
         dependencies: List of all dependencies (ADHD + PyPI)
         uv_sources: Dict of ADHD packages to their git sources
         module_name: Module name (underscored) for wheel sources mapping
+        is_mcp: Whether this is an MCP server module
         
     Returns:
         Complete pyproject.toml content as string
@@ -112,12 +111,11 @@ def generate_pyproject_content(
         content_parts.append('dependencies = []\n')
     
     # Tool.adhd section
-    content_parts.append(
-        TOOL_ADHD_SECTION.format(
-            module_type=module_type,
-            layer=layer,
-        )
-    )
+    tool_adhd = TOOL_ADHD_SECTION.format(layer=layer)
+    if is_mcp:
+        # Add mcp = true before the closing newline
+        tool_adhd = tool_adhd.rstrip('\n') + 'mcp = true\n'
+    content_parts.append(tool_adhd)
     
     # UV sources section (only if there are ADHD dependencies)
     if uv_sources:

@@ -4,7 +4,6 @@
 
 Migration tool that converts ADHD framework modules from `init.yaml` format to `pyproject.toml` format compatible with uv workspaces.
 
-**Module Type:** core  
 **Layer:** dev (used only during migration)
 
 ## Features
@@ -61,26 +60,25 @@ report.print_summary()
 | init.yaml field | pyproject.toml field |
 |-----------------|---------------------|
 | `version` | `[project].version` |
-| `type` | `[tool.adhd].type` |
+| folder location | `[tool.adhd].layer` (inferred from path) |
 | `requirements` (GitHub URLs) | `[tool.uv.sources]` + `[project].dependencies` |
 | `requirements.txt` (PyPI) | `[project].dependencies` |
 
 ### Layer Inference Defaults
 
-| Module Type | Default Layer |
-|-------------|---------------|
-| core | foundation (unless dev-specific) |
-| util | foundation |
-| manager | runtime |
-| plugin | runtime |
-| mcp | dev |
+| Folder | Default Layer |
+|--------|---------------|
+| cores | foundation (unless dev-specific) |
+| utils | foundation |
+| managers | runtime |
+| plugins | runtime |
+| mcps | runtime (+ `mcp = true`) |
 
 ### Example Conversion
 
-**Input: init.yaml**
+**Input: init.yaml** (legacy)
 ```yaml
 version: 0.0.1
-type: manager
 requirements:
   - https://github.com/AI-Driven-Highspeed-Development/Logger-Util.git
 ```
@@ -101,7 +99,6 @@ dependencies = [
 ]
 
 [tool.adhd]
-type = "manager"
 layer = "runtime"
 
 [tool.uv.sources]
@@ -117,8 +114,7 @@ build-backend = "hatchling.build"
 ```
 cores/uv_migrator_core/
 ├── __init__.py           # Module exports
-├── init.yaml             # Module metadata
-├── uv_migrator_core.py   # Main controller/orchestrator
+├── pyproject.toml        # Module metadata
 ├── migrator.py           # Conversion logic
 ├── templates.py          # pyproject.toml template strings
 ├── uv_migrator_cli.py    # CLI command registration
@@ -141,9 +137,9 @@ cores/uv_migrator_core/
 
 ### Unit Tests (Optional)
 ```bash
-pytest <module_type>/<module_name>/tests/
+pytest cores/uv_migrator_core/tests/
 ```
 
 ### Adversarial Testing
-HyperRed will attack this module based on `testing.scope` in `init.yaml`.
-Configure threat_model: `internal` | `external` | `adversarial`
+HyperRed will attack this module based on threat model.
+Configure in testing scope: `internal` | `external` | `adversarial`
