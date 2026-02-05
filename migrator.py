@@ -16,8 +16,9 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
+import yaml
+
 from logger_util import Logger
-from yaml_reading_core.yaml_reading import YamlReadingCore as YamlReader
 
 from .templates import generate_pyproject_content
 
@@ -35,7 +36,7 @@ LAYER_DEFAULTS: dict[str, str] = {
 DEV_CORES: set[str] = {
     "module_creator_core",
     "project_creator_core",
-    "questionary_core",
+    "creator_common_core",
     "uv_migrator_core",  # This module itself is dev-only
 }
 
@@ -59,8 +60,11 @@ def parse_init_yaml(module_path: Path) -> dict[str, Any]:
     if not init_yaml_path.exists():
         raise FileNotFoundError(f"No init.yaml found at {init_yaml_path}")
     
-    yaml_reader = YamlReader()
-    data = yaml_reader.read_yaml(init_yaml_path)
+    try:
+        with open(init_yaml_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f) or {}
+    except yaml.YAMLError as e:
+        raise ValueError(f"init.yaml at {init_yaml_path} is not valid YAML: {e}")
     
     if not isinstance(data, dict):
         raise ValueError(f"init.yaml at {init_yaml_path} is not a valid YAML dict")
@@ -99,10 +103,9 @@ def github_url_to_package_name(url: str) -> str:
     Convert a GitHub URL to a package name.
     
     .. deprecated:: 3.0.0
-        This function was used for polyrepo Git URL handling during init.yaml migration.
-        With the workspace monorepo migration complete, new modules use `{ workspace = true }`
-        instead of Git URLs. This function is kept for backward compatibility with any
-        remaining init.yaml files that need migration.
+        Legacy function from the polyrepo-to-monorepo migration (v2 → v3).
+        Monorepo modules now use `{ workspace = true }` in pyproject.toml.
+        Retained for any edge cases requiring Git URL parsing.
     
     Examples:
         https://github.com/AI-Driven-Highspeed-Development/Logger-Util.git → logger-util
@@ -144,9 +147,8 @@ def is_github_url(requirement: str) -> bool:
     """Check if a requirement string is a GitHub URL.
     
     .. deprecated:: 3.0.0
-        This function was used for polyrepo Git URL handling during init.yaml migration.
-        With the workspace monorepo migration complete, ADHD dependencies use
-        `{ workspace = true }` instead of Git URLs.
+        Legacy function from the polyrepo-to-monorepo migration (v2 → v3).
+        Monorepo modules now use `{ workspace = true }` in pyproject.toml.
     """
     return "github.com" in requirement.lower()
 
@@ -158,11 +160,9 @@ def convert_requirements(
     Split requirements into dependencies and uv.sources.
     
     .. deprecated:: 3.0.0
-        This function was used for polyrepo Git URL handling during init.yaml migration.
-        With the workspace monorepo migration complete, all ADHD dependencies use
-        `{ workspace = true }` in [tool.uv.sources] instead of Git URLs.
-        This function is kept for backward compatibility with any remaining init.yaml
-        files that need migration.
+        Legacy function from the polyrepo-to-monorepo migration (v2 → v3).
+        Monorepo modules now use `{ workspace = true }` in pyproject.toml.
+        Retained for any edge cases requiring init.yaml migration.
     
     - GitHub URLs → add to both dependencies AND uv_sources
     - PyPI packages → add to dependencies only

@@ -5,8 +5,8 @@ description = "ADHD Framework core: uv_migrator_core"
 requires-python = ">=3.11"
 dependencies = [
     "logger-util",
-    "yaml-reading-core",
     "modules-controller-core",
+    "pyyaml>=6.0",
 ]
 
 [project.urls]
